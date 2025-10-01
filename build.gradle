@@ -1,0 +1,138 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.6'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.proxy'
+version = '0.0.1-SNAPSHOT'
+description = 'makecontract'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot 기본
+    implementation 'org.springframework.boot:spring-boot-starter'
+
+    // --- web3j & codegen 추가 ---
+    implementation "org.web3j:core:4.10.0"
+    implementation "org.web3j:codegen:4.10.0"
+    // (ECDSA/키 관련 필요시)
+    implementation "org.bouncycastle:bcprov-jdk15on:1.70"
+    implementation "org.projectlombok:lombok:1.18.32"
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+/**
+ * -------- Solidity 컴파일 & web3j Wrapper 코드 생성 --------
+ * 사용 방법:
+ *  1) src/main/solidity 에 .sol 파일을 넣는다.
+ *  2) Gradle 탭에서 `buildContracts` 실행
+ *     → build/solidity 에 *.abi/*.bin 생성
+ *     → src/main/java/{패키지}/ 에 Wrapper .java 생성
+ */
+def solSrcDir  = "$projectDir/src/main/solidity"
+def solOutDir  = "$buildDir/solidity"
+def wrapperPkg = "com.proxy.contracts"         // 생성할 자바 패키지명
+def wrapperOut = "$projectDir/src/main/java"   // Wrapper 생성 위치
+
+// npx, solc 절대경로 지정 (네 환경에 맞춤)
+def npxCmd  = "/Users/kd-server/.nvm/versions/node/v22.12.0/bin/npx"
+def solcCmd = "/opt/homebrew/bin/solc"
+
+// 1) Solidity 컴파일: solc --bin --abi --optimize -o build/solidity *.sol
+tasks.register('compileSolidity') {
+    group = "blockchain"
+    description = "Compile Solidity contracts to ABI/BIN with solc."
+
+    inputs.files(fileTree(solSrcDir) { include '**/*.sol' })
+    outputs.dir(solOutDir)
+
+    doLast {
+        file(solOutDir).mkdirs()
+        def solFiles = fileTree(solSrcDir) { include '**/*.sol' }.files
+        if (solFiles.empty) {
+            logger.lifecycle("No .sol files found in: $solSrcDir")
+            return
+        }
+        solFiles.each { File f ->
+            logger.lifecycle("Compiling: ${f.name}")
+            exec {
+                // npx solc 대신 절대경로 solc 직접 실행
+                executable = solcCmd
+                args = [
+                        '--bin', '--abi', '--optimize',
+                        '--evm-version', 'petersburg',  // ← 우선 petersburg로 보수적 타겟
+                        '--overwrite',
+                        '-o', solOutDir,
+                        f.absolutePath
+                ]
+            }
+        }
+    }
+}
+
+// 2) web3j Wrapper 생성: ABI/BIN 쌍마다 Java Wrapper 생성
+tasks.register('generateWrappers') {
+    group = "blockchain"
+    description = "Generate Java wrappers from ABI/BIN with web3j codegen."
+    dependsOn 'compileSolidity'
+
+    inputs.files(fileTree(solOutDir) { include '**/*.abi', '**/*.bin' })
+    outputs.dir(wrapperOut)
+
+    doLast {
+        file(wrapperOut).mkdirs()
+
+        def abiFiles = fileTree(solOutDir) { include '**/*.abi' }.files
+        if (abiFiles.empty) {
+            logger.lifecycle("No .abi files found in: $solOutDir (did compileSolidity run?)")
+            return
+        }
+
+        abiFiles.each { File abi ->
+            File bin = new File(abi.parentFile, abi.name.replace('.abi', '.bin'))
+            if (!bin.exists()) {
+                logger.lifecycle("Skip wrapper (bin missing): ${abi.name}")
+                return
+            }
+            logger.lifecycle("Generating wrapper for: ${abi.name.replace('.abi','')}")
+
+            javaexec {
+                mainClass = 'org.web3j.codegen.SolidityFunctionWrapperGenerator'
+                classpath = sourceSets.main.runtimeClasspath
+                args = [
+                        '-a', abi.absolutePath,
+                        '-b', bin.absolutePath,
+                        '-p', wrapperPkg,
+                        '-o', wrapperOut
+                ]
+            }
+        }
+    }
+}
+
+// 3) 통합 태스크
+tasks.register('buildContracts') {
+    group = "blockchain"
+    description = "Compile Solidity and generate Java wrappers"
+    dependsOn 'compileSolidity', 'generateWrappers'
+}
