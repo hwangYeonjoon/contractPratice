@@ -55,6 +55,8 @@ def wrapperPkg = "com.proxy.contracts"         // 생성할 자바 패키지명
 def wrapperOut = "$projectDir/src/main/java"   // Wrapper 생성 위치
 
 // npx, solc 절대경로 지정 (네 환경에 맞춤)
+//def npxCmd  = "/Users/kd-server/.nvm/versions/node/v22.12.0/bin/npx"
+//home
 def npxCmd  = "/Users/kd-server/.nvm/versions/node/v22.12.0/bin/npx"
 def solcCmd = "/opt/homebrew/bin/solc"
 
