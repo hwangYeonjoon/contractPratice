@@ -43,47 +43,47 @@ public class DemoRunner {
 
         // 2) ContractService 직접 생성
         ContractService contractService = new ContractService(web3j, credentials, gasProvider);
-//        TokenFactory t = contractService.deploy(TokenFactory.class);
-//        System.out.println("deployed at: " + t.getContractAddress()); //0x77315b9625aef4d687b15346fbbf46c0ac5f0fdc
-        TokenFactory factory= contractService.load(TokenFactory.class, "0x77315b9625aef4d687b15346fbbf46c0ac5f0fdc");
+        TokenFactory t = contractService.deploy(TokenFactory.class);
+        System.out.println("deployed at: " + t.getContractAddress()); //초기 잘못만든거 : 0x77315b9625aef4d687b15346fbbf46c0ac5f0fdc // 수정버전 : 0x4d37eff003d2ab934b762e06abee70a405934fff
+//        TokenFactory factory= contractService.load(TokenFactory.class, "0x77315b9625aef4d687b15346fbbf46c0ac5f0fdc");
 
-        String name = "YJTestToken";
-        String symbol = "YTT";
-        BigInteger decimals = BigInteger.valueOf(18);
-        BigInteger initial = BigInteger.valueOf(1_000_000);
-        boolean mintable = true;
-        boolean burnable = true;
-        BigInteger cap = BigInteger.valueOf(10_000_000); // 0 이면 무제한
-
-
-        var receipt = factory.createToken(name, symbol, decimals, initial, mintable, burnable, cap).send();
-        System.out.println("check : " + receipt);
-        List<TokenFactory.TokenCreatedEventResponse> evs = factory.getTokenCreatedEvents(receipt);
-        System.out.println("check evs :" + evs.toString());
-        String tokenAddr = evs.get(0).token;
-        System.out.println("New token: " + tokenAddr);
-
-        OwnableERC20 token = OwnableERC20.load(tokenAddr, web3j, credentials, gasProvider);
-
-// ✅ 3) 기본 정보 조회
-        String tName = token.name().send();
-        String tSymbol = token.symbol().send();
-        BigInteger tDecimals = token.decimals().send();
-        BigInteger tSupply = token.totalSupply().send();
-        String tOwner = token.owner().send();
-
-        System.out.println("📘 Token Info");
-        System.out.println("Name      : " + tName);
-        System.out.println("Symbol    : " + tSymbol);
-        System.out.println("Decimals  : " + tDecimals);
-        System.out.println("TotalSupply: " + tSupply);
-        System.out.println("Owner     : " + tOwner);
-
-// ✅ 4) 내 잔고 조회
-        String myAddr = credentials.getAddress();
-        BigInteger myBalance = token.balanceOf(myAddr).send();
-        System.out.println("My Balance: " + myBalance + " (" +
-                myBalance.divide(BigInteger.TEN.pow(tDecimals.intValue())) + " " + tSymbol + ")");
+//        String name = "YJ2TestToken";
+//        String symbol = "YTT2";
+//        BigInteger decimals = BigInteger.valueOf(18);
+//        BigInteger initial = BigInteger.valueOf(1_000_000);
+//        boolean mintable = true;
+//        boolean burnable = true;
+//        BigInteger cap = BigInteger.valueOf(10_000_000); // 0 이면 무제한
+//
+//
+//        var receipt = factory.createToken(name, symbol, decimals, initial, mintable, burnable, cap).send();
+//        System.out.println("check : " + receipt);
+//        List<TokenFactory.TokenCreatedEventResponse> evs = factory.getTokenCreatedEvents(receipt);
+//        System.out.println("check evs :" + evs.toString());
+//        String tokenAddr = evs.get(0).token;
+//        System.out.println("New token: " + tokenAddr);
+//
+//        OwnableERC20 token = OwnableERC20.load(tokenAddr, web3j, credentials, gasProvider);
+//
+//// ✅ 3) 기본 정보 조회
+//        String tName = token.name().send();
+//        String tSymbol = token.symbol().send();
+//        BigInteger tDecimals = token.decimals().send();
+//        BigInteger tSupply = token.totalSupply().send();
+//        String tOwner = token.owner().send();
+//
+//        System.out.println("📘 Token Info");
+//        System.out.println("Name      : " + tName);
+//        System.out.println("Symbol    : " + tSymbol);
+//        System.out.println("Decimals  : " + tDecimals);
+//        System.out.println("TotalSupply: " + tSupply);
+//        System.out.println("Owner     : " + tOwner);
+//
+//// ✅ 4) 내 잔고 조회
+//        String myAddr = credentials.getAddress();
+//        BigInteger myBalance = token.balanceOf(myAddr).send();
+//        System.out.println("My Balance: " + myBalance + " (" +
+//                myBalance.divide(BigInteger.TEN.pow(tDecimals.intValue())) + " " + tSymbol + ")");
 
 
 //         3) MappingWithDelete 배포 (주석 상태 유지)

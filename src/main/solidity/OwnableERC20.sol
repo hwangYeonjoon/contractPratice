@@ -51,27 +51,28 @@ contract OwnableERC20 {
         string memory _name,
         string memory _symbol,
         uint8  _decimals,
-        uint256 _initialSupply,   // 사람 기준 (예: 1_000_000)
+        uint256 _initialSupply,
         bool _mintable,
         bool _burnable,
-        uint256 _cap              // 사람 기준; 0이면 무제한
+        uint256 _cap,
+        address _initialOwner   // ★ 추가
     ) {
-        if (bytes(_name).length == 0 || bytes(_symbol).length == 0) revert ZeroAmount();
+        if (_initialOwner == address(0)) revert ZeroAddress();
         name = _name;
         symbol = _symbol;
         decimals = _decimals;
-        owner = msg.sender;
+        owner = _initialOwner;            // ★ 오너 지정
         mintable = _mintable;
         burnable = _burnable;
 
         uint256 mul = 10 ** uint256(_decimals);
         uint256 init = _initialSupply * mul;
         uint256 capRaw = (_cap == 0) ? 0 : _cap * mul;
-        cap = capRaw; // 0 or scaled cap
+        cap = capRaw;
 
         if (cap != 0 && init > cap) revert CapExceeded();
 
-        // 초기 발행 -> owner
+        // 초기 발행 → 지정한 owner에게 바로 민팅
         if (init > 0) {
             totalSupply = init;
             balanceOf[owner] += init;

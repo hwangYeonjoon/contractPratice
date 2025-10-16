@@ -28,7 +28,7 @@ contract TokenFactory {
         uint256 cap             // 사람 기준(0=무제한)
     ) external returns (address tokenAddr) {
         OwnableERC20 t = new OwnableERC20(
-            name, symbol, decimals, initialSupply, mintable, burnable, cap
+            name, symbol, decimals, initialSupply, mintable, burnable, cap, msg.sender // ★ 사용자 주소
         );
         tokenAddr = address(t);
 
